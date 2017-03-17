@@ -89,11 +89,7 @@ if __name__ == "__main__":
         # Search for and download tiles
         print('Acquiring ' + dataset['description'] + ' data (' + dataset['name'] + ')')
         with requests.Session() as session:
-            count = 0
             for date in find_dates(session, dataset['url']):
-                if count == 2:
-                    break
-                count += 1
                 print('    ' + date['date'])
                 for tile in find_tiles(session, date['url'], dataset['tilename_format'], dataset['tile_locations']):
                     output = filename_for(dataset['satellite'], dataset['name'], date['date'], tile['name'])
