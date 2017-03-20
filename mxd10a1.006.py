@@ -51,10 +51,10 @@ def find_dates(session, url):
     print('  Checking available dates')
     page = get_page(session, url)
     dates = []
-    for td in page.find_all('td', class_='indexcolname', string=re.compile('20\d{2}\.\d{2}\.\d{2}')):
+    for tag in page.find_all('td', class_='indexcolname', string=re.compile('20\d{2}\.\d{2}\.\d{2}')):
         dates.append({
-            'date': td.a.text.replace('.', '-').rstrip('/'),
-            'url': url + td.a.attrs['href'],
+            'date': tag.a.text.replace('.', '-').rstrip('/'),
+            'url': url + tag.a.attrs['href'],
         })
     if len(dates) > 0:
         print('  Downloading ' + str(len(dates)) + ' tilesets from ' + dates[0]['date'] + ' to ' + dates[-1]['date'])
@@ -67,10 +67,10 @@ def find_tiles(session, url, tilename_format, tile_locations):
     tiles = []
     for location in tile_locations:
         tile_regexp = re.compile(tilename_format.replace('LOCATION', location))
-        for td in page.find_all('td', class_='indexcolname', string=tile_regexp):
+        for tag in page.find_all('td', class_='indexcolname', string=tile_regexp):
             tiles.append({
-                'name': td.a.text,
-                'url': url + td.a.attrs['href'],
+                'name': tag.a.text,
+                'url': url + tag.a.attrs['href'],
             })
     return tiles
 
