@@ -76,13 +76,14 @@ def find_tiles(session, url, tilename_format, tile_locations):
 
 # Download imagery for the specified date and tile locations
 def download(session, url, output):
-    print('      ' + output)
+    print('      ' + os.path.basename(output).ljust(49, ' ') + ' ... ', end='', flush=True)
     with open(output, 'wb') as f:
         stream = session.get(url, stream=True)
         for chunk in stream.iter_content(chunk_size=1024):
             if chunk: # filter out keep-alive new lines
                 f.write(chunk)
         stream.close()
+    print('done')
 
 if __name__ == "__main__":
     for dataset in datasets:
