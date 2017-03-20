@@ -44,7 +44,7 @@ def get_page(session, url):
     request = session.get(url)
     request.raise_for_status() # raises if bad request status code
     request.close()
-    return BeautifulSoup(request.text, 'html.parser')
+    return BeautifulSoup(request.text, 'lxml-xml')
 
 # Find dates for which imagery is available
 def find_dates(session, url):
