@@ -78,7 +78,7 @@ def find_tiles(session, url, tilename_format, tile_locations):
 def download(session, url, output):
     stream = session.get(url, stream=True)
     chunk_size = 1024*2
-    filesize = round(int(stream.headers.get('Content-Length')) / chunk_size)
+    filesize = round(int(stream.headers.get('Content-Length')) / chunk_size, 1)
     message = '      ' + os.path.basename(output)
     with tqdm(desc=message, total=filesize, unit='KB') as pbar:
         with open(output, 'wb') as f:
