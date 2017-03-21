@@ -10,6 +10,7 @@ import re
 
 import requests               # to load pages and download files
 from bs4 import BeautifulSoup # to parse pages
+from tqdm import tqdm         # to display download progress bar
 
 datasets = [
     {
@@ -75,15 +76,17 @@ def find_tiles(session, url, tilename_format, tile_locations):
 
 # Download imagery for the specified date and tile locations
 def download(session, url, output):
-    print('      ' + os.path.basename(output) + ' ... ', end='', flush=True)
     stream = session.get(url, stream=True)
     chunk_size = 1024*2
-    with open(output, 'wb') as f:
-        for chunk in stream.iter_content(chunk_size=chunk_size):
-            if chunk: # filter out keep-alive new lines
-                f.write(chunk)
+    filesize = round(int(stream.headers.get('Content-Length')) / chunk_size)
+    message = '      ' + os.path.basename(output)
+    with tqdm(desc=message, total=filesize, unit='KB') as pbar:
+        with open(output, 'wb') as f:
+            for chunk in stream.iter_content(chunk_size=chunk_size):
+                if chunk: # filter out keep-alive new lines
+                    f.write(chunk)
+                    pbar.update()
     stream.close()
-    print('done')
 
 if __name__ == "__main__":
     for dataset in datasets:
