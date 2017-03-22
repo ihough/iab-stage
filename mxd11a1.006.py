@@ -76,17 +76,20 @@ def find_tiles(session, url, tilename_format, tile_locations):
 
 # Download imagery for the specified date and tile locations
 def download(session, url, output):
-    stream = session.get(url, stream=True)
-    chunk_size = 1024*2
-    filesize = round(int(stream.headers.get('Content-Length')) / chunk_size, 1)
     message = '      ' + os.path.basename(output)
-    with tqdm(desc=message, total=filesize, unit='KB') as pbar:
-        with open(output, 'wb') as f:
-            for chunk in stream.iter_content(chunk_size=chunk_size):
-                if chunk: # filter out keep-alive new lines
-                    f.write(chunk)
-                    pbar.update()
-    stream.close()
+    if os.path.exists(output):
+        print(message + ' already downloaded')
+    else:
+        stream = session.get(url, stream=True)
+        chunk_size = 1024*2
+        filesize = int(stream.headers.get('Content-Length'))
+        with tqdm(desc=message, total=round(filesize / chunk_size, 1), unit='KB') as pbar:
+            with open(output, 'wb') as f:
+                for chunk in stream.iter_content(chunk_size=chunk_size):
+                    if chunk: # filter out keep-alive new lines
+                        f.write(chunk)
+                        pbar.update()
+        stream.close()
 
 if __name__ == "__main__":
     for dataset in datasets:
