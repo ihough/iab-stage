@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Download MODIS MXD13A3 v6 vegetation indices for metropolitan France
+# Download MODIS land data for metropolitan France from the USGS LP DAAC
 #   ~/.netrc must be configured with a NASA Earthdata username and password
 #   (see https://wiki.earthdata.nasa.gov/display/EL/How+To+Access+Data+With+cURL+And+Wget)
 
@@ -13,6 +13,22 @@ from bs4 import BeautifulSoup # to parse pages
 from tqdm import tqdm         # to display download progress bar
 
 datasets = [
+    {
+        'name': 'MYD11A1.006',
+        'description': 'MODIS/Aqua Land Surface Temperature and Emissivity Daily L3 Global 1 km Grid SIN V006',
+        'satellite': 'aqua',
+        'url': 'https://e4ftl01.cr.usgs.gov/MOLA/MYD11A1.006/',
+        'tilename_format': 'MYD11A1\.A\d{7}\.LOCATION\..+\.hdf',
+        'tile_locations': ['h17v04', 'h18v03', 'h18v04'],
+    },
+    {
+        'name': 'MOD11A1.006',
+        'description': 'MODIS/Terra Land Surface Temperature and Emissivity Daily L3 Global 1 km Grid SIN V006',
+        'satellite': 'terra',
+        'url': 'https://e4ftl01.cr.usgs.gov/MOLT/MOD11A1.006/',
+        'tilename_format': 'MOD11A1\.A\d{7}\.LOCATION\..+\.hdf',
+        'tile_locations': ['h17v04', 'h18v03', 'h18v04'],
+    },
     {
         'name': 'MYD13A3.006',
         'description': 'MODIS/Aqua Vegetation Indices Monthly L3 Global 1km Grid SIN V006',
@@ -76,17 +92,20 @@ def find_tiles(session, url, tilename_format, tile_locations):
 
 # Download imagery for the specified date and tile locations
 def download(session, url, output):
-    stream = session.get(url, stream=True)
-    chunk_size = 1024*2
-    filesize = round(int(stream.headers.get('Content-Length')) / chunk_size, 1)
     message = '      ' + os.path.basename(output)
-    with tqdm(desc=message, total=filesize, unit='KB') as pbar:
-        with open(output, 'wb') as f:
-            for chunk in stream.iter_content(chunk_size=chunk_size):
-                if chunk: # filter out keep-alive new lines
-                    f.write(chunk)
-                    pbar.update()
-    stream.close()
+    if os.path.exists(output):
+        print(message + ' already downloaded')
+    else:
+        stream = session.get(url, stream=True)
+        chunk_size = 1024*2
+        filesize = int(stream.headers.get('Content-Length'))
+        with tqdm(desc=message, total=round(filesize / chunk_size, 1), unit='KB') as pbar:
+            with open(output, 'wb') as f:
+                for chunk in stream.iter_content(chunk_size=chunk_size):
+                    if chunk: # filter out keep-alive new lines
+                        f.write(chunk)
+                        pbar.update()
+        stream.close()
 
 if __name__ == "__main__":
     for dataset in datasets:

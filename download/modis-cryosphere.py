@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Download MODIS MXD10A1 v6 snow cover data for metropolitan France
+# Download MODIS cryosphere data for metropolitan France from the NSIDC DAAC
 #   ~/.netrc must be configured with a NASA Earthdata username and password
 #   (see https://nsidc.org/support/faq/what-options-are-available-bulk-downloading-data-https-earthdata-login-enabled)
 
