@@ -97,14 +97,14 @@ def download(session, url, output):
         print(message + ' already downloaded')
     else:
         stream = session.get(url, stream=True)
-        chunk_size = 1024*2
-        filesize = int(stream.headers.get('Content-Length'))
-        with tqdm(desc=message, total=round(filesize / chunk_size, 1), unit='KB') as pbar:
+        chunk_size = 16 * 1024
+        file_size = int(stream.headers.get('Content-Length'))
+        with tqdm(desc=message, total=file_size, unit='B', unit_scale=True) as pbar:
             with open(output, 'wb') as f:
                 for chunk in stream.iter_content(chunk_size=chunk_size):
                     if chunk: # filter out keep-alive new lines
                         f.write(chunk)
-                        pbar.update()
+                        pbar.update(chunk_size)
         stream.close()
 
 if __name__ == "__main__":
