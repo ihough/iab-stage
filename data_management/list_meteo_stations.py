@@ -3,8 +3,17 @@
 # Extract a list of stations from the meteo france observation data
 
 import csv
+from datetime import datetime
 import os
 import re
+
+# list variables to count records of
+count_vars = [
+    'tm',
+    'tn',
+    'tx',
+    'tntxm',
+]
 
 # convert lat or lng stored as (d)dmmss to decimal degrees
 def ddmmss_to_decimal(ddmmss):
@@ -24,6 +33,10 @@ def ddmmss_to_decimal(ddmmss):
 
     # round to 6 decimal places
     return round(decimal, 6)
+
+# convert date as DDYYMMMM to Date
+def ddmmyyyy_to_date(ddmmyyyy):
+    return datetime.strptime(ddmmyyyy, '%d%m%Y')
 
 # compile a list of unique stations from all data files in regional subdirs of root
 def extract_stations(root):
@@ -62,58 +75,102 @@ def extract_stations(root):
                 with open(os.path.join(base, file), 'r') as f:
                     reader = csv.DictReader(f, dialect='excel', delimiter=';', fieldnames=fields)
                     for row in reader:
-                        try:
-                            # If the station already exists, update its record
-                            record = stations[row['insee']]
-                            record['days'] += 1
-                            if record['lat'] != row['lat'] or record['lng'] != row['lng']:
-                                record['previous_lats'] += '/' + row['lat']
-                                record['previous_lngs'] += '/' + row['lng']
-                                record['lat'] = row['lat']
-                                record['lng'] = row['lng']
-                        except KeyError:
-                            # If the station does not exist, create a record for it
+                        # If the station does not exist, create a record for it
+                        if row['insee'] not in stations:
                             stations[row['insee']] = {
-                                'region': dirname,
-                                'lat': row['lat'],
-                                'lng': row['lng'],
+                                'regions': [dirname],
+                                'lats': [ddmmss_to_decimal(row['lat'])],
+                                'lngs': [ddmmss_to_decimal(row['lng'])],
                                 'days': 1,
-                                'tm': 0,
-                                'tn': 0,
-                                'tx': 0,
-                                'tntxm': 0,
                             }
                             record = stations[row['insee']]
 
+                            # Set first and last date
+                            d = ddmmyyyy_to_date(row['date'])
+                            record['dates'] = [d, d]
+
+                            # Set counts for all temperature data to zero
+                            for var in count_vars:
+                                record[var] = 0
+
+                        # Otherwise update its record
+                        else:
+                            record = stations[row['insee']]
+                            record['days'] += 1
+
+                            # Check if region has changed
+                            if dirname not in record['regions']:
+                                record['regions'] += [dirname]
+
+                            # Parse lat and lng and check if they have changed
+                            for var in ['lat', 'lng']:
+                                val = ddmmss_to_decimal(row[var])
+                                pluralized = var + 's'
+                                if val not in record[pluralized]:
+                                    record[pluralized] += [val]
+
+                            # Check for new first or last date
+                            d = ddmmyyyy_to_date(row['date'])
+                            if d < record['dates'][0]:
+                                record['dates'][0] = d
+                            elif d > record['dates'][1]:
+                                record['dates'][1] = d
+
+                        # For all records - new or extant
                         # Check for temperature data and update the station's record
-                        for var in ['tm', 'tn', 'tx', 'tntxm']:
+                        for var in count_vars:
                             if row[var] != '':
                                 record[var] += 1
 
     return stations
 
 def summarize(root, stations):
-    print('Writing station list to ' + os.path.join(root, 'station_list.csv'))
-    headers = ['station', 'region', 'latitude', 'longitude', 'previous_lats', 'previous_lngs', 'days']
-    with open(os.path.join(root, 'station_list.csv'), 'w') as f:
+    outpath = os.path.join(root, 'station_list.csv')
+    print('Writing station list to ' + outpath)
+    headers = [
+        'insee_id',
+        'region',
+        'lat',
+        'lng',
+        'days',
+    ]
+    headers += count_vars
+    headers += [
+        'first_date',
+        'last_date',
+        'period_days',
+        'region_count',
+        'lat_count',
+        'lng_count',
+        'regions',
+        'lats',
+        'lngs',
+    ]
+    with open(outpath, 'w') as f:
         writer = csv.DictWriter(f, dialect='excel', fieldnames=headers)
         writer.writeheader()
 
         for insee, record in stations.items():
             row = {
-                'station': insee,
-                'region': record['region'],
+                'insee_id': insee,
+                'region': record['regions'][-1],
+                'lat': record['lats'][-1],
+                'lng': record['lngs'][-1],
                 'days': record['days'],
             }
 
-            # parse the latitude to decimal format
-            row['latitude']  = ddmmss_to_decimal(record['lat'])
-            row['longitude'] = ddmmss_to_decimal(record['lng'])
+            for var in count_vars:
+                row[var] = record[var]
 
-            # record previous lat/lng if any
-            if 'previous_lats' in record.keys():
-                row['previous_lats'] = record['previous_lats']
-                row['previous_lngs'] = record['previous_lngs']
+            row['first_date'] = record['dates'][0].strftime('%Y-%m-%d')
+            row['last_date'] = record['dates'][1].strftime('%Y-%m-%d')
+            row['period_days'] = (record['dates'][1] - record['dates'][0]).days + 1
+            row['region_count'] = len(record['regions'])
+            row['lat_count'] = len(record['lats'])
+            row['lng_count'] = len(record['lngs'])
+            row['regions'] = record['regions']
+            row['lats'] = record['lats']
+            row['lngs'] = record['lngs']
 
             writer.writerow(row)
 
